@@ -894,6 +894,121 @@
     color: var(--bg);
   }
 
+  .champion-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .champion-btn {
+    padding: 14px 28px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .champion-btn:hover {
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .champion-btn.primary {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--bg);
+    font-weight: 700;
+  }
+  .champion-btn.primary:hover {
+    background: #e8b847;
+    border-color: #e8b847;
+  }
+  .champion-btn:disabled {
+    opacity: 0.5;
+    cursor: wait;
+  }
+
+  /* Capture-mode: bracket prepared for export */
+  .bracket-wrap.capturing {
+    overflow: visible !important;
+    background: var(--bg);
+    padding: 40px;
+  }
+  .bracket-wrap.capturing .round-nav { display: none !important; }
+  .bracket-wrap.capturing .bracket {
+    flex-direction: row !important;
+    gap: 48px !important;
+  }
+  .bracket-wrap.capturing .round-col {
+    display: flex !important;
+    min-width: 240px !important;
+  }
+  .bracket-wrap.capturing .round-col .round-label {
+    display: block !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 10px !important;
+    letter-spacing: 0.3em !important;
+    text-transform: uppercase !important;
+    color: var(--ink-dim) !important;
+    text-align: center !important;
+    margin-bottom: 24px !important;
+    padding-bottom: 8px !important;
+    border-bottom: 1px dashed var(--line) !important;
+    background: none !important;
+    border-top: none !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+  .bracket-wrap.capturing .match {
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+  .bracket-wrap.capturing .contestant {
+    background: var(--bg-elev) !important;
+    border: 1px solid var(--line) !important;
+    padding: 12px 14px !important;
+  }
+  .bracket-wrap.capturing .contestant + .contestant {
+    border-top: none !important;
+  }
+  .bracket-wrap.capturing .match-num {
+    position: absolute !important;
+    top: -9px !important;
+    left: 12px !important;
+    background: var(--bg) !important;
+    border-bottom: none !important;
+    margin: 0 !important;
+    padding: 0 8px !important;
+  }
+
+  /* Capture watermark */
+  .capture-watermark {
+    display: none;
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-dim);
+    letter-spacing: 0.2em;
+  }
+  .capture-watermark .champ-line {
+    color: var(--gold);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    letter-spacing: 0.15em;
+    margin-top: 8px;
+  }
+  .bracket-wrap.capturing .capture-watermark {
+    display: block;
+  }
+
   .hidden { display: none; }
 
   /* Reset button in header when playing */
@@ -1007,7 +1122,11 @@
     <div class="champion-poster empty" id="championPoster">🏆</div>
     <div class="champion-name" id="championName">—</div>
     <div class="champion-sub">La película más grande del torneo.</div>
-    <button class="reset-btn" id="resetBtn">↻ Nuevo torneo</button>
+    <div class="champion-actions">
+      <button class="champion-btn primary" id="downloadBtn">📸 Descargar imagen</button>
+      <button class="champion-btn" id="shareBtn">🔗 Compartir</button>
+      <button class="champion-btn" id="resetBtn">↻ Nuevo torneo</button>
+    </div>
   </div>
 </div>
 
@@ -1534,6 +1653,365 @@
 
   $("headerReset").addEventListener("click", resetAll);
   $("resetBtn").addEventListener("click", resetAll);
+  $("downloadBtn").addEventListener("click", downloadBracketImage);
+  $("shareBtn").addEventListener("click", shareBracketImage);
+
+  // --- DOWNLOAD / SHARE BRACKET IMAGE ---
+  // We draw the bracket from scratch on a canvas for clean, predictable output
+  async function captureBracket() {
+    const numRounds = state.rounds.length;
+    const names = roundNames[state.size];
+
+    // Layout config
+    const PADDING = 60;
+    const TITLE_H = 80;
+    const FOOTER_H = 100;
+    const COL_W = 280;
+    const COL_GAP = 60;
+    const MATCH_H = 84;
+    const MATCH_GAP_BASE = 24;
+    const ROUND_LABEL_H = 40;
+
+    // Compute first-round height to size the canvas
+    const firstRoundMatches = state.rounds[0].length;
+    const firstRoundHeight = firstRoundMatches * MATCH_H + (firstRoundMatches - 1) * MATCH_GAP_BASE;
+
+    const canvasW = PADDING * 2 + numRounds * COL_W + (numRounds - 1) * COL_GAP;
+    const canvasH = PADDING + TITLE_H + ROUND_LABEL_H + firstRoundHeight + FOOTER_H + PADDING;
+
+    const scale = 2; // for retina/high-quality
+    const canvas = document.createElement("canvas");
+    canvas.width = canvasW * scale;
+    canvas.height = canvasH * scale;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(scale, scale);
+
+    // Background
+    ctx.fillStyle = "#0a0a0f";
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    // Subtle gradient glow top-left
+    const grad1 = ctx.createRadialGradient(canvasW * 0.2, canvasH * 0.1, 0, canvasW * 0.2, canvasH * 0.1, canvasW * 0.5);
+    grad1.addColorStop(0, "rgba(255, 60, 0, 0.06)");
+    grad1.addColorStop(1, "transparent");
+    ctx.fillStyle = grad1;
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    // Title
+    const titleY = PADDING + 30;
+    ctx.fillStyle = "#8a8578";
+    ctx.font = "bold 11px 'JetBrains Mono', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillText("CINEMA ROYALE · VOL. 01", canvasW / 2, titleY);
+
+    ctx.fillStyle = "#f4f0e8";
+    ctx.font = "bold 56px 'Bebas Neue', sans-serif";
+    ctx.fillText("MOVIE ", canvasW / 2 - 50, titleY + 56);
+    const movieW = ctx.measureText("MOVIE ").width;
+    ctx.fillStyle = "#ff3c00";
+    ctx.fillText("× BRACKET", canvasW / 2 - 50 + movieW, titleY + 56);
+
+    // Underline
+    ctx.strokeStyle = "#f4f0e8";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(PADDING, titleY + 75);
+    ctx.lineTo(canvasW - PADDING, titleY + 75);
+    ctx.stroke();
+
+    // Compute match positions for each round (centered relative to first round)
+    const roundsLayout = [];
+    for (let r = 0; r < numRounds; r++) {
+      const matchesInRound = state.rounds[r].length;
+      const layout = [];
+      for (let m = 0; m < matchesInRound; m++) {
+        const groupSize = Math.pow(2, r);
+        const startMatch = m * groupSize;
+        const endMatch = startMatch + groupSize - 1;
+        const startCenterY = startMatch * (MATCH_H + MATCH_GAP_BASE) + MATCH_H / 2;
+        const endCenterY = endMatch * (MATCH_H + MATCH_GAP_BASE) + MATCH_H / 2;
+        const centerY = (startCenterY + endCenterY) / 2;
+        const x = PADDING + r * (COL_W + COL_GAP);
+        const y = titleY + 90 + ROUND_LABEL_H + centerY - MATCH_H / 2;
+        layout.push({ x, y, centerY: y + MATCH_H / 2 });
+      }
+      roundsLayout.push(layout);
+    }
+
+    // Round labels
+    ctx.fillStyle = "#8a8578";
+    ctx.font = "bold 11px 'JetBrains Mono', monospace";
+    ctx.textAlign = "center";
+    for (let r = 0; r < numRounds; r++) {
+      const roundName = (names[r] || `Ronda ${r+1}`).toUpperCase();
+      const x = PADDING + r * (COL_W + COL_GAP) + COL_W / 2;
+      const y = titleY + 90 + 20;
+      ctx.fillText(roundName.split('').join(' '), x, y);
+      // Dashed line under
+      ctx.setLineDash([3, 4]);
+      ctx.strokeStyle = "#2a2a33";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(PADDING + r * (COL_W + COL_GAP), y + 10);
+      ctx.lineTo(PADDING + r * (COL_W + COL_GAP) + COL_W, y + 10);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Helper: draw connector line between this match and parent match
+    function drawConnector(fromX, fromY, toX, toY, isWon) {
+      const midX = fromX + (toX - fromX) / 2;
+      ctx.strokeStyle = isWon ? "rgba(212, 169, 74, 0.5)" : "#2a2a33";
+      ctx.lineWidth = isWon ? 1.5 : 1;
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(midX, fromY);
+      ctx.lineTo(midX, toY);
+      ctx.lineTo(toX, toY);
+      ctx.stroke();
+    }
+
+    // Draw connectors first (under matches)
+    for (let r = 0; r < numRounds - 1; r++) {
+      const currentMatches = state.rounds[r];
+      const currentLayout = roundsLayout[r];
+      const nextLayout = roundsLayout[r + 1];
+      currentMatches.forEach((match, idx) => {
+        const fromX = currentLayout[idx].x + COL_W;
+        const fromY = currentLayout[idx].centerY;
+        const nextIdx = Math.floor(idx / 2);
+        const toX = nextLayout[nextIdx].x;
+        const toY = nextLayout[nextIdx].centerY;
+        drawConnector(fromX, fromY, toX, toY, !!match.winner);
+      });
+    }
+
+    // Helper: load image as a Promise
+    function loadImage(url) {
+      return new Promise((resolve) => {
+        if (!url) { resolve(null); return; }
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = url;
+      });
+    }
+
+    // Pre-load all posters in parallel
+    const allMovies = new Set();
+    state.rounds.forEach(round => {
+      round.forEach(m => {
+        if (m.a) allMovies.add(m.a);
+        if (m.b) allMovies.add(m.b);
+      });
+    });
+    const posterImages = {};
+    await Promise.all([...allMovies].map(async (movie) => {
+      const url = state.posters[movie];
+      if (url) posterImages[movie] = await loadImage(url);
+    }));
+
+    // Draw matches
+    for (let r = 0; r < numRounds; r++) {
+      state.rounds[r].forEach((match, idx) => {
+        const { x, y } = roundsLayout[r][idx];
+        // Match number label
+        ctx.fillStyle = "#0a0a0f";
+        ctx.fillRect(x + 8, y - 6, 38, 12);
+        ctx.fillStyle = "#8a8578";
+        ctx.font = "bold 9px 'JetBrains Mono', monospace";
+        ctx.textAlign = "left";
+        ctx.fillText(`M${String(idx + 1).padStart(2, "0")}`, x + 12, y + 2);
+
+        ['a', 'b'].forEach((slot, slotIdx) => {
+          const val = match[slot];
+          const slotY = y + slotIdx * (MATCH_H / 2);
+          const slotH = MATCH_H / 2;
+          const isWinner = match.winner && match.winner === val;
+          const isLoser = match.winner && match.winner !== val && val;
+
+          // Background
+          ctx.fillStyle = "#12121a";
+          ctx.fillRect(x, slotY, COL_W, slotH);
+
+          // Border
+          ctx.strokeStyle = isWinner ? "#d4a94a" : "#2a2a33";
+          ctx.lineWidth = isWinner ? 1.5 : 1;
+          ctx.strokeRect(x + 0.5, slotY + 0.5, COL_W - 1, slotH - 1);
+
+          // Poster
+          const posterX = x + 10;
+          const posterY = slotY + 6;
+          const posterW = 24;
+          const posterH = 36;
+          ctx.fillStyle = "#1a1a24";
+          ctx.fillRect(posterX, posterY, posterW, posterH);
+          if (val && posterImages[val]) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(posterX, posterY, posterW, posterH);
+            ctx.clip();
+            ctx.drawImage(posterImages[val], posterX, posterY, posterW, posterH);
+            ctx.restore();
+          }
+          // Border on poster
+          ctx.strokeStyle = "#2a2a33";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(posterX + 0.5, posterY + 0.5, posterW - 1, posterH - 1);
+
+          // Movie name
+          let nameColor;
+          if (!val) nameColor = "#8a8578";
+          else if (isWinner) nameColor = "#d4a94a";
+          else if (isLoser) nameColor = "#5a5750";
+          else nameColor = "#f4f0e8";
+
+          ctx.fillStyle = nameColor;
+          ctx.font = `bold 14px 'Libre Caslon Text', Georgia, serif`;
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+
+          const nameX = posterX + posterW + 12;
+          const nameMaxW = COL_W - (nameX - x) - 30;
+          const displayName = val || "— TBD —";
+          const truncated = truncateText(ctx, displayName, nameMaxW);
+          ctx.fillText(truncated, nameX, slotY + slotH / 2);
+
+          // Strikethrough for loser
+          if (isLoser) {
+            const tw = ctx.measureText(truncated).width;
+            ctx.strokeStyle = "#5a5750";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(nameX, slotY + slotH / 2);
+            ctx.lineTo(nameX + tw, slotY + slotH / 2);
+            ctx.stroke();
+          }
+
+          // Winner checkmark
+          if (isWinner) {
+            ctx.fillStyle = "#d4a94a";
+            ctx.font = "bold 16px sans-serif";
+            ctx.textAlign = "right";
+            ctx.fillText("✓", x + COL_W - 12, slotY + slotH / 2 + 1);
+          }
+        });
+
+        // Divider between a and b
+        ctx.strokeStyle = "#1f1f28";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y + MATCH_H / 2);
+        ctx.lineTo(x + COL_W, y + MATCH_H / 2);
+        ctx.stroke();
+      });
+    }
+
+    // Footer with watermark + champion
+    const champion = state.rounds[numRounds - 1]?.[0]?.winner || "";
+    const footerY = canvasH - PADDING - FOOTER_H + 20;
+    ctx.strokeStyle = "#2a2a33";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(PADDING, footerY);
+    ctx.lineTo(canvasW - PADDING, footerY);
+    ctx.stroke();
+
+    ctx.fillStyle = "#8a8578";
+    ctx.font = "bold 11px 'JetBrains Mono', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillText("🎬  M O V I E   B R A C K E T", canvasW / 2, footerY + 28);
+
+    if (champion) {
+      ctx.fillStyle = "#d4a94a";
+      ctx.font = "bold 32px 'Bebas Neue', sans-serif";
+      ctx.fillText(`🏆  ${champion.toUpperCase()}`, canvasW / 2, footerY + 64);
+    }
+
+    return canvas;
+  }
+
+  function truncateText(ctx, text, maxWidth) {
+    if (ctx.measureText(text).width <= maxWidth) return text;
+    let truncated = text;
+    while (truncated.length > 0 && ctx.measureText(truncated + "…").width > maxWidth) {
+      truncated = truncated.slice(0, -1);
+    }
+    return truncated + "…";
+  }
+
+  async function downloadBracketImage() {
+    const btn = $("downloadBtn");
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Generando...";
+    try {
+      const canvas = await captureBracket();
+      const champion = state.rounds[state.rounds.length - 1]?.[0]?.winner || "bracket";
+      const safeName = champion.replace(/[^\w\s-]/g, "").replace(/\s+/g, "_").toLowerCase();
+      const link = document.createElement("a");
+      link.download = `bracket_${safeName}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      btn.textContent = "✓ Descargado";
+      setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1800);
+    } catch (err) {
+      console.error(err);
+      alert("Error generando la imagen: " + err.message);
+      btn.textContent = original;
+      btn.disabled = false;
+    }
+  }
+
+  async function shareBracketImage() {
+    const btn = $("shareBtn");
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Generando...";
+    try {
+      const canvas = await captureBracket();
+      const champion = state.rounds[state.rounds.length - 1]?.[0]?.winner || "bracket";
+
+      canvas.toBlob(async (blob) => {
+        const file = new File([blob], `bracket_${champion}.png`, { type: "image/png" });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: "Mi Movie Bracket",
+              text: `🏆 Mi campeón: ${champion}`,
+            });
+            btn.textContent = "✓ Compartido";
+          } catch (err) {
+            btn.textContent = original;
+          }
+        } else {
+          try {
+            await navigator.clipboard.write([
+              new ClipboardItem({ "image/png": blob })
+            ]);
+            btn.textContent = "✓ Copiada al portapapeles";
+          } catch {
+            const link = document.createElement("a");
+            link.download = `bracket_${champion}.png`;
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+            btn.textContent = "✓ Descargada";
+          }
+        }
+        setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 2200);
+      }, "image/png");
+    } catch (err) {
+      console.error(err);
+      alert("Error: " + err.message);
+      btn.textContent = original;
+      btn.disabled = false;
+    }
+  }
 
   function resetAll() {
     state.movies = [];
