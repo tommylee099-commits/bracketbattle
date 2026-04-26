@@ -431,6 +431,150 @@
     letter-spacing: 0.15em;
   }
 
+  .challenge-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 14px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .challenge-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ---------- CHALLENGE MODAL ---------- */
+  .challenge-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 10, 15, 0.92);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 20px;
+  }
+  .challenge-overlay.show {
+    display: flex;
+    animation: fadeIn 0.3s ease-out;
+  }
+  .challenge-modal {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    max-width: 540px;
+    width: 100%;
+    padding: 32px;
+    position: relative;
+  }
+  .challenge-modal::before {
+    content: "◣";
+    position: absolute;
+    top: -1px; left: -1px;
+    color: var(--accent);
+    font-size: 20px;
+    line-height: 1;
+  }
+  .challenge-modal h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+  .challenge-modal p {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-dim);
+    margin-bottom: 20px;
+    line-height: 1.6;
+    letter-spacing: 0.05em;
+  }
+  .challenge-link-box {
+    padding: 14px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink);
+    word-break: break-all;
+    line-height: 1.5;
+    margin-bottom: 16px;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+  .challenge-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .challenge-action {
+    flex: 1;
+    min-width: 120px;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .challenge-action:hover {
+    border-color: var(--ink);
+  }
+  .challenge-action.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+    font-weight: 700;
+  }
+  .challenge-action.primary:hover {
+    background: var(--accent-glow);
+    border-color: var(--accent-glow);
+  }
+  .challenge-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: transparent;
+    border: none;
+    color: var(--ink-dim);
+    font-size: 24px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px 8px;
+  }
+  .challenge-close:hover { color: var(--accent); }
+
+  .challenge-banner {
+    background: rgba(255, 60, 0, 0.08);
+    border: 1px solid var(--accent);
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink);
+    letter-spacing: 0.05em;
+    line-height: 1.6;
+  }
+  .challenge-banner strong {
+    color: var(--accent);
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
   /* ---------- BRACKET SCREEN ---------- */
   .bracket-wrap {
     overflow-x: auto;
@@ -1049,6 +1193,10 @@
 
   <!-- SETUP -->
   <section class="setup" id="setupScreen">
+    <div class="challenge-banner hidden" id="challengeBanner">
+      <strong>🎬 Te desafiaron a un bracket</strong>
+      Las películas ya están cargadas abajo. Solo dale a "Iniciar torneo" y armá tu propio cuadro.
+    </div>
     <h2>Ingresá los contendientes</h2>
     <p class="instructions">
       Elegí cuántas películas van a pelear y pegá todas juntas abajo.
@@ -1105,6 +1253,7 @@
     </div>
 
     <button class="start-btn" id="startBtn">Iniciar torneo →</button>
+    <button class="challenge-btn" id="challengeBtn">🔗 Generar link para desafiar a alguien</button>
   </section>
 
   <!-- BRACKET -->
@@ -1113,6 +1262,21 @@
     <div class="bracket" id="bracket"></div>
   </section>
 
+</div>
+
+<!-- CHALLENGE MODAL -->
+<div class="challenge-overlay" id="challengeOverlay">
+  <div class="challenge-modal">
+    <button class="challenge-close" id="challengeClose">×</button>
+    <h3>🔗 Compartir desafío</h3>
+    <p>Mandale este link a alguien. Cuando lo abra, va a tener tus mismas pelis cargadas y puede armar su propio bracket eligiendo sus ganadores. Después podés comparar resultados.</p>
+    <div class="challenge-link-box" id="challengeLink"></div>
+    <div class="challenge-actions">
+      <button class="challenge-action primary" id="copyLinkBtn">📋 Copiar link</button>
+      <button class="challenge-action" id="shareLinkBtn">📤 Compartir</button>
+      <button class="challenge-action" id="whatsappLinkBtn">💬 WhatsApp</button>
+    </div>
+  </div>
 </div>
 
 <!-- CHAMPION OVERLAY -->
@@ -2026,6 +2190,11 @@
     $("statusText").textContent = "Cargá tus películas";
     $("roundText").textContent = "— SETUP —";
     $("bulkInput").value = "";
+    $("challengeBanner").classList.add("hidden");
+    // Clear URL
+    if (location.search) {
+      history.replaceState(null, "", location.pathname);
+    }
     updateCount();
     renderCategoryGrid();
     renderMoviesPicker();
@@ -2323,6 +2492,141 @@
   updateCount();
   renderCategoryGrid();
   renderMoviesPicker();
+
+  // --- CHALLENGE: URL encoding/decoding ---
+  function encodeChallengeURL(movies, size) {
+    // Use base URL without query string
+    const base = location.origin + location.pathname;
+    const data = {
+      m: movies,
+      s: size,
+    };
+    // Encode as base64 to keep URL clean and handle special chars
+    const json = JSON.stringify(data);
+    const b64 = btoa(unescape(encodeURIComponent(json)));
+    return `${base}?c=${b64}`;
+  }
+
+  function decodeChallengeURL() {
+    const params = new URLSearchParams(location.search);
+    const c = params.get("c");
+    if (!c) return null;
+    try {
+      const json = decodeURIComponent(escape(atob(c)));
+      const data = JSON.parse(json);
+      if (Array.isArray(data.m) && data.s) {
+        return { movies: data.m, size: data.s };
+      }
+    } catch (err) {
+      console.error("Invalid challenge URL", err);
+    }
+    return null;
+  }
+
+  // Check if loaded with challenge URL
+  const challenge = decodeChallengeURL();
+  if (challenge) {
+    // Pre-fill the setup screen
+    state.size = challenge.size;
+    document.querySelectorAll(".size-btn").forEach(b => {
+      b.classList.toggle("active", parseInt(b.dataset.size) === challenge.size);
+    });
+    // Switch to manual mode and fill textarea
+    state.mode = "manual";
+    document.querySelectorAll(".mode-tab").forEach(t => {
+      t.classList.toggle("active", t.dataset.mode === "manual");
+    });
+    $("categoriesMode").classList.add("hidden");
+    $("manualMode").classList.remove("hidden");
+    $("bulkInput").value = challenge.movies.join("\n");
+    updateCount();
+    // Show banner
+    $("challengeBanner").classList.remove("hidden");
+    // Scroll to top so user sees banner
+    window.scrollTo(0, 0);
+  }
+
+  // --- CHALLENGE: Generate link ---
+  $("challengeBtn").addEventListener("click", () => {
+    let movies = [];
+    if (state.mode === "categories") {
+      movies = [...state.selected];
+    } else {
+      movies = parseMovies($("bulkInput").value);
+    }
+
+    if (movies.length < state.size) {
+      alert(`Faltan películas. Tenés ${movies.length}, necesitás ${state.size} para armar el desafío.`);
+      return;
+    }
+    if (movies.length > state.size) {
+      movies = movies.slice(0, state.size);
+    }
+
+    const url = encodeChallengeURL(movies, state.size);
+    $("challengeLink").textContent = url;
+    $("challengeOverlay").classList.add("show");
+
+    // Store for share buttons
+    state.lastChallengeURL = url;
+    state.lastChallengeMovies = movies;
+  });
+
+  $("challengeClose").addEventListener("click", () => {
+    $("challengeOverlay").classList.remove("show");
+  });
+  $("challengeOverlay").addEventListener("click", (e) => {
+    if (e.target.id === "challengeOverlay") {
+      $("challengeOverlay").classList.remove("show");
+    }
+  });
+
+  $("copyLinkBtn").addEventListener("click", async () => {
+    const btn = $("copyLinkBtn");
+    const original = btn.textContent;
+    try {
+      await navigator.clipboard.writeText(state.lastChallengeURL);
+      btn.textContent = "✓ Copiado";
+    } catch {
+      // Fallback: select text
+      const range = document.createRange();
+      range.selectNode($("challengeLink"));
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      btn.textContent = "Selecciona y copia";
+    }
+    setTimeout(() => { btn.textContent = original; }, 2000);
+  });
+
+  $("shareLinkBtn").addEventListener("click", async () => {
+    const btn = $("shareLinkBtn");
+    const original = btn.textContent;
+    const text = `🎬 Te desafío a este bracket de pelis: ¿podés elegir las mismas que yo?`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Movie Bracket Challenge",
+          text: text,
+          url: state.lastChallengeURL,
+        });
+      } catch (err) { /* user cancelled */ }
+    } else {
+      // Fallback: copy
+      try {
+        await navigator.clipboard.writeText(`${text}\n${state.lastChallengeURL}`);
+        btn.textContent = "✓ Copiado al portapapeles";
+        setTimeout(() => { btn.textContent = original; }, 2000);
+      } catch {
+        alert("Tu navegador no soporta compartir directamente. Copiá el link manualmente.");
+      }
+    }
+  });
+
+  $("whatsappLinkBtn").addEventListener("click", () => {
+    const text = `🎬 Te desafío a este bracket de pelis: ${state.lastChallengeURL}`;
+    const wsUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(wsUrl, "_blank");
+  });
 </script>
 
 </body>
