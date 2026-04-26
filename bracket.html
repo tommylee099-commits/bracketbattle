@@ -1,0 +1,1851 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Movie Bracket</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg-elev: #12121a;
+    --ink: #f4f0e8;
+    --ink-dim: #8a8578;
+    --accent: #ff3c00;
+    --accent-glow: #ff6a33;
+    --gold: #d4a94a;
+    --line: #2a2a33;
+    --win: #39d353;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Libre Caslon Text', Georgia, serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(255,60,0,0.08), transparent 50%),
+      radial-gradient(circle at 80% 90%, rgba(212,169,74,0.05), transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2' /><feColorMatrix values='0 0 0 0 0.96 0 0 0 0 0.94 0 0 0 0 0.9 0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    opacity: 0.5;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+    z-index: 1;
+  }
+
+  .container {
+    position: relative;
+    z-index: 2;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 40px 32px 80px;
+  }
+
+  @media (max-width: 640px) {
+    .container { padding: 20px 16px 60px; }
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 20px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+
+  @media (max-width: 640px) {
+    header { margin-bottom: 24px; padding-bottom: 14px; gap: 12px; }
+    .meta { text-align: left; }
+  }
+
+  .title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(48px, 7vw, 96px);
+    line-height: 0.85;
+    letter-spacing: -0.02em;
+  }
+  .title .amp {
+    color: var(--accent);
+    font-style: italic;
+    margin: 0 4px;
+  }
+
+  .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+
+  .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    text-align: right;
+  }
+  .meta .round {
+    color: var(--accent);
+    font-size: 14px;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+
+  /* ---------- SETUP SCREEN ---------- */
+  .setup {
+    max-width: 700px;
+    margin: 40px auto 0;
+    padding: 40px;
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    position: relative;
+  }
+  @media (max-width: 640px) {
+    .setup { padding: 24px 18px; margin-top: 16px; }
+  }
+  .setup::before {
+    content: "◣";
+    position: absolute;
+    top: -1px; left: -1px;
+    color: var(--accent);
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  .setup h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    letter-spacing: 0.02em;
+    margin-bottom: 8px;
+  }
+
+  .setup .instructions {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-dim);
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+
+  .size-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .size-btn {
+    flex: 1;
+    min-width: 70px;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .size-btn:hover { border-color: var(--ink); color: var(--ink); }
+  .size-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+  }
+
+  /* ---------- CATEGORIES ---------- */
+  .mode-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .mode-tab {
+    flex: 1;
+    padding: 12px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--ink-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .mode-tab:hover { color: var(--ink); }
+  .mode-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .category-btn {
+    padding: 14px 10px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .category-btn:hover {
+    border-color: var(--ink);
+    transform: translateY(-1px);
+  }
+  .category-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+  }
+  .category-btn .cat-emoji {
+    display: block;
+    font-size: 22px;
+    margin-bottom: 4px;
+    font-family: sans-serif;
+  }
+
+  .movies-picker {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    margin-bottom: 16px;
+    max-height: 380px;
+    overflow-y: auto;
+  }
+  .movies-picker::-webkit-scrollbar { width: 6px; }
+  .movies-picker::-webkit-scrollbar-track { background: var(--bg-elev); }
+  .movies-picker::-webkit-scrollbar-thumb { background: var(--line); }
+
+  .picker-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--ink-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+  }
+
+  .picker-cat-header {
+    padding: 10px 14px;
+    background: var(--bg-elev);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  .picker-cat-header:first-child { border-top: none; }
+  .cat-toggle-all {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    padding: 3px 8px;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .cat-toggle-all:hover { color: var(--accent); border-color: var(--accent); }
+
+  .picker-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background 0.1s;
+    gap: 10px;
+    border-top: 1px solid #1a1a22;
+  }
+  .picker-item:hover { background: var(--bg-elev); }
+  .picker-item.selected {
+    background: rgba(255, 60, 0, 0.08);
+  }
+  .picker-checkbox {
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid var(--line);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .picker-item.selected .picker-checkbox {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .picker-item.selected .picker-checkbox::after {
+    content: "✓";
+    color: var(--bg);
+    font-size: 12px;
+    font-weight: 900;
+  }
+  .picker-name {
+    font-family: 'Libre Caslon Text', serif;
+    font-size: 14px;
+    flex: 1;
+  }
+
+  .selected-counter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    margin-bottom: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .selected-counter strong {
+    color: var(--accent);
+    font-size: 14px;
+  }
+  .selected-counter strong.ok { color: var(--win); }
+  .clear-btn {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    padding: 4px 10px;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .clear-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  .bulk-wrap {
+    margin-bottom: 24px;
+  }
+  .bulk-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin-bottom: 8px;
+  }
+  .bulk-count {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .bulk-count.ok { color: var(--win); }
+  .bulk-count.bad { color: var(--accent); }
+
+  .bulk-input {
+    width: 100%;
+    min-height: 220px;
+    padding: 14px 16px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-family: 'Libre Caslon Text', serif;
+    font-size: 15px;
+    line-height: 1.7;
+    resize: vertical;
+    transition: border-color 0.2s;
+  }
+  .bulk-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .bulk-hint {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-dim);
+    margin-top: 6px;
+    letter-spacing: 0.1em;
+  }
+
+  .start-btn {
+    width: 100%;
+    padding: 18px;
+    background: var(--accent);
+    border: none;
+    color: var(--bg);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    letter-spacing: 0.15em;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .start-btn:hover {
+    background: var(--accent-glow);
+    letter-spacing: 0.25em;
+  }
+  .start-btn:disabled {
+    background: var(--line);
+    color: var(--ink-dim);
+    cursor: not-allowed;
+    letter-spacing: 0.15em;
+  }
+
+  /* ---------- BRACKET SCREEN ---------- */
+  .bracket-wrap {
+    overflow-x: auto;
+    padding-bottom: 20px;
+  }
+  .bracket-wrap::-webkit-scrollbar { height: 8px; }
+  .bracket-wrap::-webkit-scrollbar-track { background: var(--bg-elev); }
+  .bracket-wrap::-webkit-scrollbar-thumb { background: var(--line); }
+
+  /* Round nav (mobile only) */
+  .round-nav {
+    display: none;
+    gap: 6px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .round-nav::-webkit-scrollbar { display: none; }
+  .round-nav-btn {
+    flex: 0 0 auto;
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .round-nav-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+  }
+  .round-nav-btn.done {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+  .round-nav-btn.done.active {
+    background: var(--gold);
+    color: var(--bg);
+  }
+
+  @media (max-width: 768px) {
+    .round-nav { display: flex; }
+    .bracket-wrap { overflow-x: visible; }
+    .bracket {
+      flex-direction: column;
+      gap: 0;
+    }
+    .round-col {
+      min-width: 0;
+      width: 100%;
+      display: none;
+    }
+    .round-col.mobile-active { display: flex; }
+    .matches-list { gap: 14px; }
+    .bracket-svg { display: none; }
+
+    .round-col .round-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 0.25em;
+      color: var(--accent);
+      text-transform: uppercase;
+      text-align: center;
+      margin: 8px 0 20px;
+      padding: 0;
+      border: none;
+      position: relative;
+    }
+    .round-col .round-label::before,
+    .round-col .round-label::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+    }
+
+    .match {
+      background: var(--bg-elev);
+      border: 1px solid var(--line);
+      padding: 6px 6px 6px 6px;
+    }
+    .match-num {
+      position: static;
+      display: block;
+      padding: 4px 8px 6px;
+      background: transparent;
+      font-size: 9px;
+      color: var(--ink-dim);
+      letter-spacing: 0.3em;
+      border-bottom: 1px dashed var(--line);
+      margin-bottom: 6px;
+    }
+    .contestant {
+      border: none;
+      background: transparent;
+      padding: 8px 8px;
+      min-height: 56px;
+    }
+    .contestant + .contestant {
+      border-top: 1px solid #1f1f28;
+    }
+    .contestant:first-of-type {
+      border-bottom: none;
+    }
+    .contestant .name { font-size: 14px; }
+    .poster { width: 38px; height: 56px; }
+    .contestant.winner {
+      background: rgba(212, 169, 74, 0.06);
+      border-radius: 2px;
+    }
+    .contestant.active:hover {
+      padding-left: 8px;
+    }
+  }
+
+  .bracket {
+    display: flex;
+    gap: 48px;
+    min-width: min-content;
+    padding: 20px 0;
+    position: relative;
+  }
+
+  .round-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    min-width: 260px;
+    position: relative;
+  }
+
+  .round-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    text-align: center;
+    margin-bottom: 24px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--line);
+  }
+
+  .matches-list {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    flex: 1;
+    gap: 28px;
+  }
+
+  .match {
+    position: relative;
+    animation: matchIn 0.5s ease-out backwards;
+    border: 1px solid transparent;
+  }
+  @keyframes matchIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .match-num {
+    position: absolute;
+    top: -9px;
+    left: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--ink-dim);
+    background: var(--bg);
+    padding: 0 8px;
+    letter-spacing: 0.25em;
+    z-index: 2;
+  }
+
+  /* ---------- API KEY ---------- */
+  .api-key-wrap {
+    margin-bottom: 20px;
+    padding: 14px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+  }
+  .api-key-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin-bottom: 8px;
+  }
+  .api-key-status { font-weight: 700; }
+  .api-key-status.ok { color: var(--win); }
+  .api-key-status.bad { color: var(--accent); }
+  .api-key-input {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    transition: border-color 0.2s;
+  }
+  .api-key-input:focus { outline: none; border-color: var(--accent); }
+  .api-key-help {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--ink-dim);
+    margin-top: 6px;
+    letter-spacing: 0.1em;
+  }
+  .api-key-help a { color: var(--accent); text-decoration: none; }
+  .api-key-help a:hover { text-decoration: underline; }
+
+  /* ---------- POSTER ---------- */
+  .contestant {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    min-height: 64px;
+    gap: 12px;
+  }
+  .contestant + .contestant {
+    border-top: 1px solid #1f1f28;
+  }
+  .contestant:first-of-type { border-bottom: none; }
+
+  .poster {
+    width: 36px;
+    height: 54px;
+    flex-shrink: 0;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    background-size: cover;
+    background-position: center;
+    background-color: #1a1a24;
+    position: relative;
+  }
+  .poster.empty::after {
+    content: "🎬";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    opacity: 0.3;
+  }
+  .poster.loading::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+    animation: shimmer 1.2s infinite;
+  }
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .contestant .seed {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-dim);
+    min-width: 16px;
+  }
+
+  /* Champion poster */
+  .champion-poster {
+    width: 180px;
+    height: 270px;
+    margin: 0 auto 24px;
+    background-size: cover;
+    background-position: center;
+    border: 3px solid var(--gold);
+    box-shadow: 0 0 40px rgba(212, 169, 74, 0.4);
+  }
+  .champion-poster.empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-elev);
+    font-size: 60px;
+    opacity: 0.3;
+  }
+
+  .contestant .name {
+    font-family: 'Libre Caslon Text', serif;
+    font-size: 14px;
+    font-weight: 700;
+    flex: 1;
+    line-height: 1.3;
+  }
+
+  .contestant.active:hover {
+    background: #1a1a24;
+    border-color: var(--accent);
+    padding-left: 24px;
+  }
+  .contestant.active:hover .name {
+    color: var(--accent);
+  }
+
+  .contestant.winner {
+    background: var(--bg-elev);
+    border-color: var(--gold);
+  }
+  .contestant.winner .name {
+    color: var(--gold);
+  }
+  .contestant.winner::after {
+    content: "✓";
+    position: absolute;
+    right: 16px;
+    color: var(--gold);
+    font-size: 18px;
+  }
+
+  .contestant.loser {
+    opacity: 0.35;
+    text-decoration: line-through;
+  }
+  .contestant.loser.clickable {
+    cursor: pointer;
+    opacity: 0.5;
+  }
+  .contestant.loser.clickable:hover {
+    opacity: 0.85;
+    background: #1a1a24;
+    border-color: var(--ink-dim);
+    text-decoration: none;
+  }
+  .contestant.loser.clickable:hover .name {
+    text-decoration: none;
+  }
+  .contestant.winner.clickable {
+    cursor: pointer;
+  }
+
+  .contestant.pending {
+    cursor: default;
+    color: var(--ink-dim);
+  }
+  .contestant.pending .name {
+    color: var(--ink-dim);
+    font-style: italic;
+  }
+
+  /* Connector SVG overlay */
+  .bracket-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .bracket-svg path {
+    fill: none;
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+
+  /* ---------- CHAMPION ---------- */
+  .champion-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 10, 15, 0.95);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 40px 20px;
+  }
+  .champion-overlay.show {
+    display: flex;
+    animation: fadeIn 0.6s ease-out;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .champion-card {
+    text-align: center;
+    max-width: 700px;
+    animation: champIn 1s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  @keyframes champIn {
+    from { transform: scale(0.7) rotate(-2deg); opacity: 0; }
+    to { transform: scale(1) rotate(0); opacity: 1; }
+  }
+
+  .champion-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.5em;
+    color: var(--gold);
+    margin-bottom: 16px;
+  }
+  .champion-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(56px, 10vw, 140px);
+    line-height: 0.9;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    padding: 20px 0;
+    border-top: 3px solid var(--gold);
+    border-bottom: 3px solid var(--gold);
+    margin-bottom: 24px;
+    position: relative;
+  }
+  .champion-name::before,
+  .champion-name::after {
+    content: "★";
+    color: var(--gold);
+    position: absolute;
+    font-size: 24px;
+  }
+  .champion-name::before { left: -40px; top: 50%; transform: translateY(-50%); }
+  .champion-name::after { right: -40px; top: 50%; transform: translateY(-50%); }
+
+  .champion-sub {
+    font-family: 'Libre Caslon Text', serif;
+    font-style: italic;
+    color: var(--ink-dim);
+    margin-bottom: 32px;
+  }
+
+  .reset-btn {
+    padding: 14px 32px;
+    background: transparent;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .reset-btn:hover {
+    background: var(--ink);
+    color: var(--bg);
+  }
+
+  .hidden { display: none; }
+
+  /* Reset button in header when playing */
+  .header-reset {
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+  .header-reset:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <div>
+      <div class="subtitle">Cinema Royale · Vol. 01</div>
+      <h1 class="title">Movie<span class="amp">×</span>Bracket</h1>
+    </div>
+    <div class="meta">
+      <div id="statusText">Cargá tus películas</div>
+      <div class="round" id="roundText">— SETUP —</div>
+      <button class="header-reset hidden" id="headerReset">↻ Reiniciar</button>
+    </div>
+  </header>
+
+  <!-- SETUP -->
+  <section class="setup" id="setupScreen">
+    <h2>Ingresá los contendientes</h2>
+    <p class="instructions">
+      Elegí cuántas películas van a pelear y pegá todas juntas abajo.
+      Se sortean al azar y arranca el torneo — click en la ganadora de cada duelo.
+    </p>
+
+    <div class="api-key-wrap">
+      <div class="api-key-label">
+        <span>TMDB API Key (para posters)</span>
+        <span class="api-key-status" id="apiKeyStatus">— sin configurar —</span>
+      </div>
+      <input class="api-key-input" id="apiKeyInput" type="password" placeholder="Pegá tu Read Access Token de TMDB">
+      <div class="api-key-help">
+        Se guarda solo en tu navegador. <a href="https://www.themoviedb.org/settings/api" target="_blank">Sacá una key gratis acá ↗</a> · Dejala vacía para jugar sin posters
+      </div>
+    </div>
+
+    <div class="size-selector" id="sizeSelector">
+      <button class="size-btn" data-size="4">4</button>
+      <button class="size-btn active" data-size="8">8</button>
+      <button class="size-btn" data-size="16">16</button>
+      <button class="size-btn" data-size="32">32</button>
+    </div>
+
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="categories">📚 Categorías</button>
+      <button class="mode-tab" data-mode="manual">✍️ Manual</button>
+    </div>
+
+    <!-- CATEGORIES MODE -->
+    <div id="categoriesMode">
+      <div class="category-grid" id="categoryGrid"></div>
+
+      <div class="selected-counter">
+        <span>Seleccionadas: <strong id="selectedCount">0</strong> / <strong id="targetSize">8</strong></span>
+        <button class="clear-btn" id="clearSelected">Limpiar</button>
+      </div>
+
+      <div class="movies-picker" id="moviesPicker">
+        <div class="picker-empty">Elegí una o más categorías arriba ↑</div>
+      </div>
+    </div>
+
+    <!-- MANUAL MODE -->
+    <div id="manualMode" class="hidden">
+      <div class="bulk-wrap">
+        <div class="bulk-label">
+          <span>Pegá las películas</span>
+          <span class="bulk-count" id="bulkCount">0 / 8</span>
+        </div>
+        <textarea class="bulk-input" id="bulkInput" placeholder="El Padrino, Pulp Fiction, Interestelar, Matrix&#10;&#10;— o —&#10;&#10;El Padrino&#10;Pulp Fiction&#10;Interestelar&#10;Matrix"></textarea>
+        <div class="bulk-hint">Separadas por coma o una por línea</div>
+      </div>
+    </div>
+
+    <button class="start-btn" id="startBtn">Iniciar torneo →</button>
+  </section>
+
+  <!-- BRACKET -->
+  <section class="bracket-wrap hidden" id="bracketScreen">
+    <div class="round-nav" id="roundNav"></div>
+    <div class="bracket" id="bracket"></div>
+  </section>
+
+</div>
+
+<!-- CHAMPION OVERLAY -->
+<div class="champion-overlay" id="championOverlay">
+  <div class="champion-card">
+    <div class="champion-label">◆ CAMPEÓN ABSOLUTO ◆</div>
+    <div class="champion-poster empty" id="championPoster">🏆</div>
+    <div class="champion-name" id="championName">—</div>
+    <div class="champion-sub">La película más grande del torneo.</div>
+    <button class="reset-btn" id="resetBtn">↻ Nuevo torneo</button>
+  </div>
+</div>
+
+<script>
+  const state = {
+    size: 8,
+    movies: [],
+    rounds: [],
+    currentRound: 0,
+    mobileRound: 0,
+    posters: {},
+    apiKey: "",
+    mode: "categories",     // "categories" | "manual"
+    activeCategories: [],   // category ids that are toggled on
+    selected: new Set(),    // movie names selected
+  };
+
+  // --- CATEGORÍAS ---
+  const CATEGORIES = {
+    pixar: {
+      name: "Pixar",
+      emoji: "💡",
+      movies: [
+        "Toy Story", "Toy Story 2", "Toy Story 3", "Toy Story 4",
+        "Buscando a Nemo", "Buscando a Dory",
+        "Los Increíbles", "Los Increíbles 2",
+        "Monsters Inc.", "Monsters University",
+        "Up", "Wall-E", "Ratatouille", "Coco", "Brave",
+        "Cars", "Cars 2", "Bichos", "Intensa-Mente", "Intensa-Mente 2",
+        "Soul", "Luca", "Red", "Onward", "Elemental",
+        "Valiente", "El Viaje de Arlo"
+      ]
+    },
+    disney: {
+      name: "Disney Animada",
+      emoji: "🏰",
+      movies: [
+        "El Rey León", "La Sirenita", "La Bella y la Bestia", "Aladdin",
+        "Mulán", "Pocahontas", "Hércules", "Tarzán",
+        "El Jorobado de Notre Dame", "Frozen", "Frozen 2",
+        "Moana", "Encanto", "Zootopia", "Enredados",
+        "Big Hero 6", "Ralph el Demoledor", "Tiana y el Sapo",
+        "Bambi", "Dumbo", "Pinocho", "Blancanieves",
+        "La Cenicienta", "La Bella Durmiente", "101 Dálmatas",
+        "La Dama y el Vagabundo", "El Libro de la Selva", "Peter Pan",
+        "Alicia en el País de las Maravillas", "Lilo & Stitch"
+      ]
+    },
+    marvel: {
+      name: "Marvel (MCU)",
+      emoji: "🦸",
+      movies: [
+        "Iron Man", "Iron Man 2", "Iron Man 3",
+        "Thor", "Thor: Ragnarok", "Thor: Love and Thunder",
+        "Capitán América: El Primer Vengador", "Capitán América: Soldado del Invierno", "Capitán América: Civil War",
+        "Los Vengadores", "Avengers: Era de Ultrón", "Avengers: Infinity War", "Avengers: Endgame",
+        "Guardianes de la Galaxia", "Guardianes de la Galaxia Vol. 2", "Guardianes de la Galaxia Vol. 3",
+        "Doctor Strange", "Doctor Strange en el Multiverso de la Locura",
+        "Black Panther", "Black Panther: Wakanda Forever",
+        "Spider-Man: Homecoming", "Spider-Man: Lejos de Casa", "Spider-Man: Sin Camino a Casa",
+        "Ant-Man", "Capitana Marvel", "Shang-Chi", "Eternals", "Deadpool", "Deadpool 2", "Deadpool & Wolverine"
+      ]
+    },
+    starwars: {
+      name: "Star Wars",
+      emoji: "⚔️",
+      movies: [
+        "Star Wars: Una Nueva Esperanza",
+        "Star Wars: El Imperio Contraataca",
+        "Star Wars: El Retorno del Jedi",
+        "Star Wars: La Amenaza Fantasma",
+        "Star Wars: El Ataque de los Clones",
+        "Star Wars: La Venganza de los Sith",
+        "Star Wars: El Despertar de la Fuerza",
+        "Star Wars: Los Últimos Jedi",
+        "Star Wars: El Ascenso de Skywalker",
+        "Rogue One: Una Historia de Star Wars",
+        "Han Solo: Una Historia de Star Wars"
+      ]
+    },
+    accion: {
+      name: "Acción",
+      emoji: "💥",
+      movies: [
+        "Duro de Matar", "Mad Max: Furia en el Camino", "Terminator 2", "Terminator",
+        "El Caballero de la Noche", "Batman Inicia", "El Caballero de la Noche Asciende",
+        "John Wick", "John Wick 2", "John Wick 3", "John Wick 4",
+        "Misión Imposible: Protocolo Fantasma", "Misión Imposible: Nación Secreta", "Misión Imposible: Fallout",
+        "Top Gun", "Top Gun: Maverick",
+        "Rápidos y Furiosos", "Rápido y Furioso 5",
+        "Rambo", "Depredador", "Robocop",
+        "Gladiador", "Braveheart", "300", "Kill Bill", "Kill Bill 2",
+        "Matrix", "Matrix Reloaded", "El Bourne Supremo"
+      ]
+    },
+    terror: {
+      name: "Terror",
+      emoji: "😱",
+      movies: [
+        "El Resplandor", "El Exorcista", "Psicosis", "Tiburón",
+        "Halloween", "Pesadilla en Elm Street", "Viernes 13", "Scream",
+        "It", "It Capítulo 2", "El Conjuro", "Annabelle", "El Conjuro 2",
+        "Hereditary", "Midsommar", "Get Out", "Us", "Nope",
+        "Alien", "Aliens", "El Hombre Invisible",
+        "Actividad Paranormal", "El Aro", "La Bruja", "A Quiet Place",
+        "Babadook", "Sinister", "Insidious", "El Sexto Sentido",
+        "El Bebé de Rosemary", "La Masacre de Texas"
+      ]
+    },
+    scifi: {
+      name: "Ciencia Ficción",
+      emoji: "🚀",
+      movies: [
+        "Blade Runner", "Blade Runner 2049", "2001: Odisea del Espacio",
+        "Interestelar", "Inception", "Tenet", "Dune", "Dune: Parte Dos",
+        "Matrix", "Matrix Reloaded", "Matrix Revolutions",
+        "Volver al Futuro", "Volver al Futuro 2", "Volver al Futuro 3",
+        "E.T.", "Encuentros Cercanos del Tercer Tipo", "Contact",
+        "Arrival", "Ex Machina", "Her", "Gravedad",
+        "El Quinto Elemento", "Distrito 9", "Looper",
+        "Origen", "Marte", "Avatar", "Avatar: El Camino del Agua",
+        "Total Recall", "Minority Report", "Inteligencia Artificial"
+      ]
+    },
+    crimen: {
+      name: "Crimen / Mafia",
+      emoji: "🔫",
+      movies: [
+        "El Padrino", "El Padrino II", "El Padrino III",
+        "Goodfellas", "Casino", "Los Infiltrados", "El Irlandés",
+        "Pulp Fiction", "Reservoir Dogs", "Tiempos Violentos",
+        "Scarface", "Érase una Vez en América", "Heat",
+        "El Silencio de los Inocentes", "Cadena Perpetua",
+        "Sospechosos Comunes", "Pecados Capitales", "Fargo",
+        "American History X", "Drive", "Sicario", "Sin City",
+        "Snatch", "Lock & Stock", "Léon: El Profesional",
+        "Memento", "Pacto de Sangre", "Chinatown", "Bullitt"
+      ]
+    },
+    comedia: {
+      name: "Comedia",
+      emoji: "😂",
+      movies: [
+        "El Gran Lebowski", "Locamente Millonarios", "¿Qué Pasó Ayer?", "¿Qué Pasó Ayer? 2",
+        "Superbad", "Pineapple Express", "Knocked Up", "Virgen a los 40",
+        "Día de la Marmota", "Mi Pobre Angelito", "Mi Pobre Angelito 2",
+        "Una Noche en el Museo", "Loco por Mary",
+        "Anchorman", "Step Brothers", "Talladega Nights",
+        "Dos Tontos Muy Tontos", "La Máscara", "Ace Ventura",
+        "Hot Fuzz", "Shaun of the Dead", "Borat",
+        "School of Rock", "Zoolander", "Ferris Bueller", "Caddyshack",
+        "Ghostbusters", "Jumanji", "Scott Pilgrim"
+      ]
+    },
+    drama: {
+      name: "Drama",
+      emoji: "🎭",
+      movies: [
+        "Forrest Gump", "Cadena Perpetua", "La Lista de Schindler",
+        "Belleza Americana", "Réquiem por un Sueño", "Magnolia",
+        "El Pianista", "Million Dollar Baby", "Náufrago",
+        "El Curioso Caso de Benjamin Button", "Brokeback Mountain",
+        "Trainspotting", "Whiplash", "La La Land",
+        "Manchester by the Sea", "Moonlight", "Una Mente Brillante",
+        "El Lobo de Wall Street", "El Aviador", "There Will Be Blood",
+        "El Gran Pez", "El Show de Truman", "Sentido y Sensibilidad",
+        "Comer, Rezar, Amar", "12 Años de Esclavitud", "El Poder del Perro",
+        "Nomadland", "El Discurso del Rey", "Birdman", "Spotlight"
+      ]
+    },
+    fantasia: {
+      name: "Fantasía",
+      emoji: "🐉",
+      movies: [
+        "El Señor de los Anillos: La Comunidad del Anillo",
+        "El Señor de los Anillos: Las Dos Torres",
+        "El Señor de los Anillos: El Retorno del Rey",
+        "El Hobbit: Un Viaje Inesperado",
+        "El Hobbit: La Desolación de Smaug",
+        "El Hobbit: La Batalla de los Cinco Ejércitos",
+        "Harry Potter y la Piedra Filosofal",
+        "Harry Potter y la Cámara Secreta",
+        "Harry Potter y el Prisionero de Azkaban",
+        "Harry Potter y el Cáliz de Fuego",
+        "Harry Potter y la Orden del Fénix",
+        "Harry Potter y el Príncipe Mestizo",
+        "Harry Potter y las Reliquias de la Muerte: Parte 1",
+        "Harry Potter y las Reliquias de la Muerte: Parte 2",
+        "Las Crónicas de Narnia: El León, la Bruja y el Ropero",
+        "Pan's Labyrinth", "La Forma del Agua", "Stardust",
+        "El Mago de Oz", "La Princesa Prometida"
+      ]
+    },
+    clasicos: {
+      name: "Clásicos",
+      emoji: "🎬",
+      movies: [
+        "Casablanca", "Lo que el Viento se Llevó", "El Mago de Oz",
+        "Ciudadano Kane", "Los Caballeros de la Mesa Cuadrada",
+        "Sunset Boulevard", "Rebelde Sin Causa", "Vértigo",
+        "La Ventana Indiscreta", "Psicosis", "Los Pájaros",
+        "12 Angry Men", "Lawrence de Arabia",
+        "El Ladrón de Bicicletas", "Cantando Bajo la Lluvia",
+        "Algunos Prefieren Quemarse", "Rocky", "Apocalypse Now",
+        "Taxi Driver", "Toro Salvaje", "Érase una Vez en el Oeste",
+        "El Bueno, el Malo y el Feo", "Tiburón", "Indiana Jones: En Busca del Arca Perdida",
+        "Star Wars: Una Nueva Esperanza", "El Padrino", "Pulp Fiction",
+        "2001: Odisea del Espacio", "Chinatown", "Blade Runner"
+      ]
+    },
+    animacion: {
+      name: "Animadas (varias)",
+      emoji: "✨",
+      movies: [
+        "Shrek", "Shrek 2", "Shrek Tercero",
+        "Madagascar", "Madagascar 2", "Kung Fu Panda", "Kung Fu Panda 2",
+        "Cómo Entrenar a tu Dragón", "Cómo Entrenar a tu Dragón 2",
+        "El Origen de los Guardianes", "Cigüeñas",
+        "Mi Villano Favorito", "Mi Villano Favorito 2", "Los Minions",
+        "El Viaje de Chihiro", "La Princesa Mononoke", "Mi Vecino Totoro",
+        "El Castillo Vagabundo", "Ponyo", "El Castillo en el Cielo",
+        "Spider-Man: Un Nuevo Universo", "Spider-Man: A Través del Spider-Verso",
+        "El Gato con Botas: El Último Deseo", "La Era de Hielo",
+        "Rio", "Hotel Transilvania", "Lego: La Película",
+        "El Príncipe de Egipto", "Anastasia"
+      ]
+    },
+    nolan: {
+      name: "Christopher Nolan",
+      emoji: "🧠",
+      movies: [
+        "Memento", "Insomnia", "Batman Inicia",
+        "El Caballero de la Noche", "El Caballero de la Noche Asciende",
+        "El Gran Truco", "Origen", "Interestelar",
+        "Dunkerque", "Tenet", "Oppenheimer", "Following"
+      ]
+    },
+    tarantino: {
+      name: "Tarantino",
+      emoji: "🎞️",
+      movies: [
+        "Reservoir Dogs", "Pulp Fiction", "Jackie Brown",
+        "Kill Bill", "Kill Bill 2", "A Prueba de Muerte",
+        "Bastardos sin Gloria", "Django sin Cadenas",
+        "Los Ocho Más Odiados", "Érase una Vez en Hollywood",
+        "Tiempos Violentos"
+      ]
+    },
+  };
+
+  // Note: we use sessionStorage instead of localStorage when in artifact context
+  // For standalone HTML it works fine
+  function loadKey() {
+    try {
+      return localStorage.getItem("tmdb_key") || "";
+    } catch { return ""; }
+  }
+  function saveKey(k) {
+    try { localStorage.setItem("tmdb_key", k); } catch {}
+  }
+
+  const roundNames = {
+    32: ["Ronda de 32", "Octavos", "Cuartos", "Semifinal", "FINAL"],
+    16: ["Octavos", "Cuartos", "Semifinal", "FINAL"],
+    8:  ["Cuartos", "Semifinal", "FINAL"],
+    4:  ["Semifinal", "FINAL"],
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  // --- SETUP ---
+  function parseMovies(text) {
+    // Split por coma o salto de línea, limpiar y filtrar vacíos
+    return text
+      .split(/[,\n\r]+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+  }
+
+  function updateCount() {
+    const movies = parseMovies($("bulkInput").value);
+    const countEl = $("bulkCount");
+    countEl.textContent = `${movies.length} / ${state.size}`;
+    countEl.classList.remove("ok", "bad");
+    if (movies.length === state.size) countEl.classList.add("ok");
+    else if (movies.length > state.size) countEl.classList.add("bad");
+  }
+
+  $("bulkInput").addEventListener("input", updateCount);
+
+  // --- MODE TABS ---
+  document.querySelectorAll(".mode-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".mode-tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      state.mode = tab.dataset.mode;
+      $("categoriesMode").classList.toggle("hidden", state.mode !== "categories");
+      $("manualMode").classList.toggle("hidden", state.mode !== "manual");
+    });
+  });
+
+  // --- CATEGORY GRID ---
+  function renderCategoryGrid() {
+    const grid = $("categoryGrid");
+    grid.innerHTML = "";
+    Object.entries(CATEGORIES).forEach(([id, cat]) => {
+      const btn = document.createElement("button");
+      btn.className = "category-btn";
+      if (state.activeCategories.includes(id)) btn.classList.add("active");
+      btn.dataset.cat = id;
+      btn.innerHTML = `<span class="cat-emoji">${cat.emoji}</span>${cat.name}`;
+      btn.addEventListener("click", () => {
+        const idx = state.activeCategories.indexOf(id);
+        if (idx >= 0) state.activeCategories.splice(idx, 1);
+        else state.activeCategories.push(id);
+        renderCategoryGrid();
+        renderMoviesPicker();
+      });
+      grid.appendChild(btn);
+    });
+  }
+
+  // --- MOVIES PICKER ---
+  function renderMoviesPicker() {
+    const picker = $("moviesPicker");
+    picker.innerHTML = "";
+
+    if (state.activeCategories.length === 0) {
+      picker.innerHTML = `<div class="picker-empty">Elegí una o más categorías arriba ↑</div>`;
+      updateSelectedCount();
+      return;
+    }
+
+    state.activeCategories.forEach(catId => {
+      const cat = CATEGORIES[catId];
+
+      const allSelected = cat.movies.every(m => state.selected.has(m));
+
+      const header = document.createElement("div");
+      header.className = "picker-cat-header";
+      header.innerHTML = `
+        <span>${cat.emoji} ${cat.name} · ${cat.movies.length}</span>
+      `;
+      const toggleBtn = document.createElement("button");
+      toggleBtn.className = "cat-toggle-all";
+      toggleBtn.textContent = allSelected ? "Desmarcar todas" : "Marcar todas";
+      toggleBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (allSelected) {
+          cat.movies.forEach(m => state.selected.delete(m));
+        } else {
+          // Only add up to size limit
+          for (const m of cat.movies) {
+            if (state.selected.size >= state.size) break;
+            state.selected.add(m);
+          }
+        }
+        renderMoviesPicker();
+      });
+      header.appendChild(toggleBtn);
+      picker.appendChild(header);
+
+      cat.movies.forEach(movie => {
+        const item = document.createElement("div");
+        item.className = "picker-item";
+        if (state.selected.has(movie)) item.classList.add("selected");
+        item.innerHTML = `
+          <div class="picker-checkbox"></div>
+          <div class="picker-name">${movie}</div>
+        `;
+        item.addEventListener("click", () => {
+          if (state.selected.has(movie)) {
+            state.selected.delete(movie);
+          } else {
+            if (state.selected.size >= state.size) {
+              alert(`Ya tenés ${state.size} seleccionadas. Quitá alguna primero o aumentá el tamaño del bracket.`);
+              return;
+            }
+            state.selected.add(movie);
+          }
+          renderMoviesPicker();
+        });
+        picker.appendChild(item);
+      });
+    });
+
+    updateSelectedCount();
+  }
+
+  function updateSelectedCount() {
+    const count = state.selected.size;
+    const countEl = $("selectedCount");
+    countEl.textContent = count;
+    countEl.classList.toggle("ok", count === state.size);
+    $("targetSize").textContent = state.size;
+  }
+
+  $("clearSelected").addEventListener("click", () => {
+    state.selected.clear();
+    renderMoviesPicker();
+  });
+
+  // --- API KEY ---
+  function updateKeyStatus() {
+    const status = $("apiKeyStatus");
+    if (state.apiKey && state.apiKey.length > 20) {
+      status.textContent = "✓ Configurada";
+      status.classList.add("ok");
+      status.classList.remove("bad");
+    } else if (state.apiKey) {
+      status.textContent = "Key inválida";
+      status.classList.add("bad");
+      status.classList.remove("ok");
+    } else {
+      status.textContent = "— sin posters —";
+      status.classList.remove("ok", "bad");
+    }
+  }
+
+  $("apiKeyInput").addEventListener("input", (e) => {
+    state.apiKey = e.target.value.trim();
+    saveKey(state.apiKey);
+    updateKeyStatus();
+  });
+
+  // Load saved key on init
+  state.apiKey = loadKey();
+  $("apiKeyInput").value = state.apiKey;
+  updateKeyStatus();
+
+  // --- TMDB FETCH ---
+  async function fetchPoster(movieName) {
+    if (!state.apiKey) return null;
+    if (state.posters[movieName] !== undefined) return state.posters[movieName];
+
+    try {
+      const url = `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(movieName)}&language=es-ES`;
+      const res = await fetch(url, {
+        headers: {
+          "Authorization": `Bearer ${state.apiKey}`,
+          "accept": "application/json"
+        }
+      });
+      if (!res.ok) {
+        state.posters[movieName] = null;
+        return null;
+      }
+      const data = await res.json();
+      const result = data.results?.[0];
+      if (result?.poster_path) {
+        const posterUrl = `https://image.tmdb.org/t/p/w154${result.poster_path}`;
+        state.posters[movieName] = posterUrl;
+        return posterUrl;
+      }
+      state.posters[movieName] = null;
+      return null;
+    } catch (err) {
+      console.error("TMDB fetch error:", err);
+      state.posters[movieName] = null;
+      return null;
+    }
+  }
+
+  async function fetchAllPosters() {
+    if (!state.apiKey) return;
+    // Fetch in batches of 4 to be respectful
+    const batches = [];
+    for (let i = 0; i < state.movies.length; i += 4) {
+      batches.push(state.movies.slice(i, i + 4));
+    }
+    for (const batch of batches) {
+      await Promise.all(batch.map(m => fetchPoster(m)));
+      renderBracket(); // progressive render
+    }
+  }
+
+  document.querySelectorAll(".size-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".size-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      state.size = parseInt(btn.dataset.size);
+      // Si tenés más seleccionadas que el nuevo size, cortás al límite
+      if (state.selected.size > state.size) {
+        const arr = [...state.selected].slice(0, state.size);
+        state.selected = new Set(arr);
+        renderMoviesPicker();
+      }
+      updateSelectedCount();
+      updateCount();
+    });
+  });
+
+  $("startBtn").addEventListener("click", () => {
+    let movies = [];
+    if (state.mode === "categories") {
+      movies = [...state.selected];
+      if (movies.length < state.size) {
+        alert(`Faltan películas. Tenés ${movies.length} seleccionadas, necesitás ${state.size}.`);
+        return;
+      }
+    } else {
+      movies = parseMovies($("bulkInput").value);
+      if (movies.length < state.size) {
+        alert(`Faltan películas. Tenés ${movies.length}, necesitás ${state.size}.`);
+        return;
+      }
+      if (movies.length > state.size) {
+        const extra = movies.length - state.size;
+        if (!confirm(`Ingresaste ${movies.length} películas pero el torneo es de ${state.size}. Se van a usar solo las primeras ${state.size} (sobran ${extra}). ¿Continuar?`)) {
+          return;
+        }
+      }
+    }
+
+    state.movies = shuffle(movies.slice(0, state.size));
+    state.posters = {};
+    buildBracket();
+    $("setupScreen").classList.add("hidden");
+    $("bracketScreen").classList.remove("hidden");
+    $("headerReset").classList.remove("hidden");
+    renderBracket();
+    fetchAllPosters();
+  });
+
+  $("headerReset").addEventListener("click", resetAll);
+  $("resetBtn").addEventListener("click", resetAll);
+
+  function resetAll() {
+    state.movies = [];
+    state.rounds = [];
+    state.currentRound = 0;
+    state.selected.clear();
+    state.activeCategories = [];
+    $("championOverlay").classList.remove("show");
+    $("bracketScreen").classList.add("hidden");
+    $("setupScreen").classList.remove("hidden");
+    $("headerReset").classList.add("hidden");
+    $("statusText").textContent = "Cargá tus películas";
+    $("roundText").textContent = "— SETUP —";
+    $("bulkInput").value = "";
+    updateCount();
+    renderCategoryGrid();
+    renderMoviesPicker();
+  }
+
+  // --- BRACKET LOGIC ---
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function buildBracket() {
+    state.rounds = [];
+    // Round 0: from shuffled movies
+    const first = [];
+    for (let i = 0; i < state.movies.length; i += 2) {
+      first.push({ a: state.movies[i], b: state.movies[i+1], winner: null });
+    }
+    state.rounds.push(first);
+    // Empty subsequent rounds
+    let count = first.length;
+    while (count > 1) {
+      count = count / 2;
+      const r = [];
+      for (let i = 0; i < count; i++) r.push({ a: null, b: null, winner: null });
+      state.rounds.push(r);
+    }
+    state.currentRound = 0;
+    state.mobileRound = 0;
+  }
+
+  function pickWinner(roundIdx, matchIdx, which) {
+    const match = state.rounds[roundIdx][matchIdx];
+    if (roundIdx !== state.currentRound) return; // only current round
+    const newWinner = which === 'a' ? match.a : match.b;
+    if (!newWinner) return;
+    if (match.winner === newWinner) return; // already this winner
+
+    // Check if next round has been touched: if any match in next round has a winner, can't change
+    if (roundIdx + 1 < state.rounds.length) {
+      const nextRound = state.rounds[roundIdx + 1];
+      const nextMatchIdx = Math.floor(matchIdx / 2);
+      const affectedNextMatch = nextRound[nextMatchIdx];
+      if (affectedNextMatch.winner) {
+        if (!confirm("Esta peli ya jugó la próxima ronda. Si cambiás el ganador, se va a reiniciar la próxima ronda. ¿Continuar?")) {
+          return;
+        }
+        // Reset everything from next round onwards
+        for (let r = roundIdx + 1; r < state.rounds.length; r++) {
+          state.rounds[r].forEach(m => {
+            m.a = null;
+            m.b = null;
+            m.winner = null;
+          });
+        }
+        // Re-propagate all winners from current round (except this match which we'll handle below)
+        state.rounds[roundIdx].forEach((m, idx) => {
+          if (idx === matchIdx) return; // skip the one being changed
+          if (m.winner) {
+            const nIdx = Math.floor(idx / 2);
+            const slot = idx % 2 === 0 ? 'a' : 'b';
+            state.rounds[roundIdx + 1][nIdx][slot] = m.winner;
+          }
+        });
+        state.currentRound = roundIdx;
+      }
+    }
+
+    match.winner = newWinner;
+
+    // Propagate to next round
+    if (roundIdx + 1 < state.rounds.length) {
+      const nextMatchIdx = Math.floor(matchIdx / 2);
+      const slot = matchIdx % 2 === 0 ? 'a' : 'b';
+      state.rounds[roundIdx + 1][nextMatchIdx][slot] = newWinner;
+    }
+
+    // Check if round is complete
+    const allDone = state.rounds[roundIdx].every(m => m.winner);
+    if (allDone) {
+      if (roundIdx + 1 < state.rounds.length) {
+        state.currentRound = roundIdx + 1;
+        state.mobileRound = roundIdx + 1;
+      } else {
+        // Tournament complete
+        setTimeout(() => showChampion(match.winner), 600);
+      }
+    }
+    renderBracket();
+  }
+
+  // --- RENDER ---
+  function renderBracket() {
+    const bracket = $("bracket");
+    bracket.innerHTML = "";
+    const names = roundNames[state.size];
+
+    state.rounds.forEach((round, rIdx) => {
+      const col = document.createElement("div");
+      col.className = "round-col";
+      if (rIdx === state.mobileRound) col.classList.add("mobile-active");
+      col.dataset.round = rIdx;
+
+      const label = document.createElement("div");
+      label.className = "round-label";
+      label.textContent = names[rIdx] || `Ronda ${rIdx+1}`;
+      col.appendChild(label);
+
+      const list = document.createElement("div");
+      list.className = "matches-list";
+
+      round.forEach((match, mIdx) => {
+        const matchEl = document.createElement("div");
+        matchEl.className = "match";
+        matchEl.dataset.round = rIdx;
+        matchEl.dataset.match = mIdx;
+        matchEl.style.animationDelay = `${mIdx * 0.04}s`;
+
+        const matchNum = document.createElement("div");
+        matchNum.className = "match-num";
+        matchNum.textContent = `M${String(mIdx+1).padStart(2,'0')}`;
+        matchEl.appendChild(matchNum);
+
+        ['a','b'].forEach(slot => {
+          const val = match[slot];
+          const el = document.createElement("div");
+          el.className = "contestant";
+
+          const isPending = !val;
+          const isCurrentRound = rIdx === state.currentRound;
+          const isDecided = !!match.winner;
+          const isWinner = isDecided && match.winner === val;
+          const isLoser = isDecided && match.winner !== val;
+          // Clickable if: in current round AND has a value
+          const isClickable = !isPending && isCurrentRound;
+
+          if (isPending) el.classList.add("pending");
+          if (isWinner) el.classList.add("winner");
+          if (isLoser) el.classList.add("loser");
+          if (isClickable && !isDecided) el.classList.add("active");
+          if (isClickable) el.classList.add("clickable");
+
+          // Poster
+          const poster = document.createElement("div");
+          poster.className = "poster";
+          if (!val) {
+            poster.classList.add("empty");
+          } else {
+            const posterUrl = state.posters[val];
+            if (posterUrl) {
+              poster.style.backgroundImage = `url(${posterUrl})`;
+            } else if (state.posters[val] === undefined && state.apiKey) {
+              poster.classList.add("loading");
+            } else {
+              poster.classList.add("empty");
+            }
+          }
+          el.appendChild(poster);
+
+          const seed = document.createElement("span");
+          seed.className = "seed";
+          seed.textContent = slot === 'a' ? '①' : '②';
+          el.appendChild(seed);
+
+          const nameEl = document.createElement("span");
+          nameEl.className = "name";
+          nameEl.textContent = val || "— TBD —";
+          el.appendChild(nameEl);
+
+          if (isClickable) {
+            el.addEventListener("click", () => pickWinner(rIdx, mIdx, slot));
+          }
+
+          matchEl.appendChild(el);
+        });
+
+        list.appendChild(matchEl);
+      });
+
+      col.appendChild(list);
+      bracket.appendChild(col);
+    });
+
+    renderRoundNav();
+
+    // Draw connector SVG after layout
+    requestAnimationFrame(() => drawConnectors());
+
+    // Update header status
+    const currentName = names[state.currentRound] || "";
+    $("roundText").textContent = `— ${currentName.toUpperCase()} —`;
+    const pendingInRound = state.rounds[state.currentRound]?.filter(m => !m.winner).length || 0;
+    $("statusText").textContent = `${pendingInRound} duelo${pendingInRound !== 1 ? 's' : ''} pendiente${pendingInRound !== 1 ? 's' : ''}`;
+  }
+
+  function renderRoundNav() {
+    const nav = $("roundNav");
+    nav.innerHTML = "";
+    const names = roundNames[state.size];
+    state.rounds.forEach((round, rIdx) => {
+      const btn = document.createElement("button");
+      btn.className = "round-nav-btn";
+      const isDone = round.every(m => m.winner);
+      const isActive = rIdx === state.mobileRound;
+      if (isDone) btn.classList.add("done");
+      if (isActive) btn.classList.add("active");
+      btn.textContent = names[rIdx] || `R${rIdx+1}`;
+      btn.addEventListener("click", () => {
+        state.mobileRound = rIdx;
+        renderBracket();
+      });
+      nav.appendChild(btn);
+    });
+  }
+
+  function drawConnectors() {
+    const bracket = $("bracket");
+    // Remove old SVG
+    const oldSvg = bracket.querySelector(".bracket-svg");
+    if (oldSvg) oldSvg.remove();
+
+    const bracketRect = bracket.getBoundingClientRect();
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "bracket-svg");
+    svg.setAttribute("width", bracketRect.width);
+    svg.setAttribute("height", bracketRect.height);
+
+    // For each round except last, connect each match to its next-round parent
+    for (let r = 0; r < state.rounds.length - 1; r++) {
+      const currentMatches = bracket.querySelectorAll(`.match[data-round="${r}"]`);
+      const nextMatches = bracket.querySelectorAll(`.match[data-round="${r+1}"]`);
+
+      currentMatches.forEach((m, idx) => {
+        const rect = m.getBoundingClientRect();
+        const nextIdx = Math.floor(idx / 2);
+        const nextM = nextMatches[nextIdx];
+        if (!nextM) return;
+        const nextRect = nextM.getBoundingClientRect();
+
+        const x1 = rect.right - bracketRect.left;
+        const y1 = rect.top + rect.height / 2 - bracketRect.top;
+        const x2 = nextRect.left - bracketRect.left;
+        const y2 = nextRect.top + nextRect.height / 2 - bracketRect.top;
+        const midX = x1 + (x2 - x1) / 2;
+
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`);
+
+        // Highlight if match has winner
+        const rIdx = parseInt(m.dataset.round);
+        const mIdx = parseInt(m.dataset.match);
+        if (state.rounds[rIdx][mIdx].winner) {
+          path.setAttribute("stroke", "var(--gold)");
+          path.setAttribute("stroke-width", "1.5");
+          path.setAttribute("opacity", "0.5");
+        }
+
+        svg.appendChild(path);
+      });
+    }
+
+    bracket.insertBefore(svg, bracket.firstChild);
+  }
+
+  // Redraw connectors on resize
+  window.addEventListener("resize", () => {
+    if (state.rounds.length > 0) drawConnectors();
+  });
+
+  function showChampion(name) {
+    $("championName").textContent = name;
+    const posterUrl = state.posters[name];
+    const posterEl = $("championPoster");
+    if (posterUrl) {
+      // Use higher resolution for champion
+      const bigPoster = posterUrl.replace("/w154", "/w500");
+      posterEl.style.backgroundImage = `url(${bigPoster})`;
+      posterEl.classList.remove("empty");
+      posterEl.textContent = "";
+    } else {
+      posterEl.style.backgroundImage = "";
+      posterEl.classList.add("empty");
+      posterEl.textContent = "🏆";
+    }
+    $("championOverlay").classList.add("show");
+    $("statusText").textContent = "Torneo finalizado";
+    $("roundText").textContent = "— CAMPEÓN —";
+  }
+
+  // Init
+  updateCount();
+  renderCategoryGrid();
+  renderMoviesPicker();
+</script>
+
+</body>
+</html>
